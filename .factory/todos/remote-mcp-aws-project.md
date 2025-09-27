@@ -28,14 +28,14 @@ Serverless Express + AWS Lambda + API Gateway + CDK を使用したRemote MCPサ
 ## Phase 1: 基本Remote MCPサーバー
 
 ### 1. プロジェクト初期化
-- [ ] package.json作成とTypeScript設定
-- [ ] 必要パッケージ導入
-  - [ ] express, @types/express
-  - [ ] @modelcontextprotocol/sdk
-  - [ ] @codegenie/serverless-express
-  - [ ] typescript, @types/node
-- [ ] tsconfig.json設定
-- [ ] プロジェクト構成フォルダ作成 (src/, dist/, cdk/)
+- [x] package.json作成とTypeScript設定
+- [x] 必要パッケージ導入
+  - [x] express, @types/express
+  - [x] @modelcontextprotocol/sdk
+  - [x] @codegenie/serverless-express
+  - [x] typescript, @types/node
+- [x] tsconfig.json設定
+- [x] プロジェクト構成フォルダ作成 (src/, dist/, cdk/)
 
 ### 2. ローカル開発環境構築
 - [ ] Express.jsベースのMCPサーバー実装 (src/app.ts)
