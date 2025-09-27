@@ -38,13 +38,15 @@ Serverless Express + AWS Lambda + API Gateway + CDK を使用したRemote MCPサ
 - [x] プロジェクト構成フォルダ作成 (src/, dist/, cdk/)
 
 ### 2. ローカル開発環境構築
-- [ ] Express.jsベースのMCPサーバー実装 (src/app.ts)
-- [ ] MCP SDK統合とプロトコル処理
-- [ ] S3操作ツール実装
-  - [ ] list-buckets ツール
-  - [ ] get-object ツール
-- [ ] ローカルサーバー起動スクリプト
-- [ ] ローカルでの動作確認
+- [ ] MCPプロトコル基本実装
+  - [ ] MCP SDK統合とリクエスト/レスポンス処理
+  - [ ] HTTP/MCPプロトコル変換処理
+- [ ] カスタムMCPツール実装
+  - [ ] 企業情報検索ツール（模擬データ使用）
+  - [ ] 汎用的なHTTP API呼び出しツール
+  - [ ] テキスト処理ユーティリティツール
+- [ ] Express.jsサーバーでのMCPエンドポイント実装
+- [ ] ローカルでのMCPクライアント接続テスト
 
 ### 3. AWS Lambda + CDK実装
 - [ ] CDKプロジェクト初期化
@@ -59,9 +61,9 @@ Serverless Express + AWS Lambda + API Gateway + CDK を使用したRemote MCPサ
 
 ### 4. MCP Client接続テスト
 - [ ] Claude Desktop設定ファイル作成
-- [ ] Remote MCP接続設定
-- [ ] 動作確認とデバッグ
-- [ ] S3操作ツールのテスト
+- [ ] Remote MCP接続設定（HTTPS）
+- [ ] 認証なし状態での基本動作確認
+- [ ] カスタムツールの動作テスト
 
 ## Phase 2: 認証・認可機能 (将来的な拡張)
 - [ ] AWS Cognito User Pools設定
