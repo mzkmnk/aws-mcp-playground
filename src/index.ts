@@ -1,24 +1,42 @@
 import express, { Application } from 'express';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { registerHelloTool } from './tools/hello';
 
 const app: Application = express();
 const port = process.env.PORT || 3000;
 
+const server = new McpServer({
+  name: 'aws-mcp-playground',
+  version: '0.0.1'
+})
+
+const transport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: undefined
+})
+
+
 app.use(express.json());
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+registerHelloTool(server);
+
+app.get('/mcp', async (req, res) => {
+  await transport.handleRequest(req, res);
+})
 
 // MCP endpoint (placeholder)
-app.post('/mcp', (req, res) => {
-  res.json({ message: 'MCP endpoint - to be implemented' });
+app.post('/mcp', async (req, res) => {
+  await transport.handleRequest(req, res, req.body);
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  console.log(`Health check: http://localhost:${port}/health`);
-  console.log(`MCP endpoint: http://localhost:${port}/mcp`);
-});
+const setupMCP = async () => {
+  await server.connect(transport);
+}
 
-export default app;
+setupMCP().then(() => {
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+    console.log(`Health check: http://localhost:${port}/health`);
+    console.log(`MCP endpoint: http://localhost:${port}/mcp`);
+  });
+})
