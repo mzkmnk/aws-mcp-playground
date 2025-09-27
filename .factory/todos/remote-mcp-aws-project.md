@@ -42,7 +42,7 @@ Serverless Express + AWS Lambda + API Gateway + CDK を使用したRemote MCPサ
   - [ ] MCP SDK統合とリクエスト/レスポンス処理
   - [ ] HTTP/MCPプロトコル変換処理
 - [ ] カスタムMCPツール実装
-  - [ ] 企業情報検索ツール（模擬データ使用）
+  - [ ] 企業ドメイン情報ツール（模擬データ使用）
   - [ ] 汎用的なHTTP API呼び出しツール
   - [ ] テキスト処理ユーティリティツール
 - [ ] Express.jsサーバーでのMCPエンドポイント実装
