@@ -3,6 +3,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
+import * as logs from 'aws-cdk-lib/aws-logs';
 
 export class AwsMcpPlaygroundStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -24,6 +25,16 @@ export class AwsMcpPlaygroundStack extends cdk.Stack {
       },
     });
 
+    // access log group
+    const apiLogAccessLogGroup = new logs.LogGroup(
+      this,
+      'ApiLogAccessGroup',
+      {
+        logGroupName: `/aws/apigateway/api-log-access-log`,
+        retention: logs.RetentionDays.ONE_YEAR
+      }
+    )
+
     // API Gateway
     const api = new apigateway.RestApi(this, 'McpApi', {
       restApiName: 'MCP Server API',
@@ -42,6 +53,17 @@ export class AwsMcpPlaygroundStack extends cdk.Stack {
         ],
       },
       binaryMediaTypes: ['*/*'],
+      deployOptions: {
+        // 実行ログ
+        dataTraceEnabled: true, // 詳細にログを表示
+        loggingLevel: apigateway.MethodLoggingLevel.INFO, // 実行六の詳細度
+
+        // アクセスログ
+        accessLogDestination: new apigateway.LogGroupLogDestination(
+          apiLogAccessLogGroup
+        ), // 出力先の指定
+        accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(), // jsonが良さそう
+      }
     });
 
     // Lambda integration
