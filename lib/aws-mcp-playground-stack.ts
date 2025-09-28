@@ -1,24 +1,27 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
-import * as path from 'path';
 
 export class AwsMcpPlaygroundStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Lambda function for MCP server
-    const mcpLambda = new lambda.Function(this, 'McpServerFunction', {
+    // Lambda function for MCP server using NodejsFunction
+    const mcpLambda = new NodejsFunction(this, 'McpServerFunction', {
+      functionName: 'AwsMcpPlayground-McpServer',
+      entry: 'src/lambda.ts',
       runtime: lambda.Runtime.NODEJS_22_X,
-      handler: 'lambda.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist')),
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
       environment: {
         NODE_ENV: 'production',
       },
       description: 'Remote MCP Server running on AWS Lambda',
+      bundling: {
+        forceDockerBundling: false,
+      },
     });
 
     // API Gateway
