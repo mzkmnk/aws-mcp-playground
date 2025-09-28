@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerHelloTool } from './tools/hello';
 
-export function createMcpApp(): { app: Application; setupMCP: () => Promise<void> } {
+export function createMcpApp(): { app: Application; setupMCP: () => void } {
   const app: Application = express();
 
   const server = new McpServer({
@@ -73,13 +73,12 @@ export function createMcpApp(): { app: Application; setupMCP: () => Promise<void
   });
 
   // Initialize MCP server
-  const setupMCP = async () => {
-    try {
-      await server.connect(transport);
+  const setupMCP = () => {
+    server.connect(transport).then(() => {
       console.log('MCP server connected successfully');
-    } catch (error) {
+    }).catch((error) => {
       console.error('Failed to setup MCP server:', error);
-    }
+    })
   };
 
   return { app, setupMCP };
