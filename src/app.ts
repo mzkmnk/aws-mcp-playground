@@ -13,6 +13,8 @@ export function createMcpApp(): { app: Application } {
     version: '0.0.1'
   });
 
+  const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+
   // Register MCP tools
   registerHelloTool(server);
 
@@ -49,18 +51,15 @@ export function createMcpApp(): { app: Application } {
     res.json(health);
   });
 
-  const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
-
   app.post('/mcp', async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
     try {
       let transport: StreamableHTTPServerTransport;
-      
+
       if (sessionId && transports[sessionId]) {
         transport = transports[sessionId];
       } else if (!sessionId && isInitializeRequest(req.body)) {
-
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (sessionId) => {
@@ -72,7 +71,6 @@ export function createMcpApp(): { app: Application } {
         transport.onclose = () => {
           const sid = transport.sessionId;
           if (sid && transports[sid]) {
-            console.log(`Transport closed for session ${sid}`);
             delete transports[sid];
           }
         };
