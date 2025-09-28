@@ -9,7 +9,7 @@
 
 ```bash
 # CDKをブートストラップ（初回のみ）
-pnpm run cdk:bootstrap
+pnpm run cdk:bootstrap --profile ${profile名}
 ```
 
 ## デプロイ手順
@@ -23,13 +23,13 @@ pnpm run build
 ### 2. CDK差分確認（推奨）
 
 ```bash
-pnpm run cdk:diff
+pnpm run cdk:diff --profile ${profile名}
 ```
 
 ### 3. デプロイ実行
 
 ```bash
-pnpm run cdk:deploy
+pnpm run cdk:deploy --profile ${profile名}
 ```
 
 デプロイが完了すると、以下の情報が出力されます：
@@ -74,5 +74,5 @@ curl https://YOUR_API_URL/health
 ## リソース削除
 
 ```bash
-pnpm run cdk:destroy
+pnpm run cdk:destroy --profile ${profile名}
 ```
