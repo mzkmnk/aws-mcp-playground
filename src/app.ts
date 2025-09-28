@@ -3,16 +3,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerHelloTool } from './tools/hello';
 
-export function createMcpApp(): { app: Application; setupMCP: () => Promise<void> } {
+export function createMcpApp(): { app: Application } {
   const app: Application = express();
 
   const server = new McpServer({
     name: 'aws-mcp-playground',
     version: '0.0.1'
-  });
-
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined
   });
 
   // Register MCP tools
@@ -34,7 +30,7 @@ export function createMcpApp(): { app: Application; setupMCP: () => Promise<void
   });
 
   // Health check endpoint
-  app.get('/health', async (req, res) => {
+  app.get('/health', async (_, res) => {
     const health = {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -44,7 +40,6 @@ export function createMcpApp(): { app: Application; setupMCP: () => Promise<void
         environment: process.env.NODE_ENV || 'development'
       },
       mcp: {
-        connected: transport ? true : false,
         sessionType: 'stateless'
       }
     };
@@ -54,29 +49,21 @@ export function createMcpApp(): { app: Application; setupMCP: () => Promise<void
 
   // MCP endpoint - GET
   app.get('/mcp', async (req, res) => {
-    try {
-      await transport.handleRequest(req, res);
-    } catch (error) {
-      console.error('MCP GET request error:', error);
-      res.status(500).json({ error: 'MCP request failed' });
-    }
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+    await server.connect(transport);
+
+    await transport.handleRequest(req, res);
   });
 
   // MCP endpoint - POST
   app.post('/mcp', async (req, res) => {
-    try {
-      await transport.handleRequest(req, res, req.body);
-    } catch (error) {
-      console.error('MCP POST request error:', error);
-      res.status(500).json({ error: 'MCP request failed' });
-    }
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+    await server.connect(transport);
+
+    await transport.handleRequest(req, res, req.body);
   });
 
-  // Initialize MCP server
-  const setupMCP = async (): Promise<void> => {
-    await server.connect(transport);
-    console.log('MCP server connected successfully');
-  };
-
-  return { app, setupMCP };
+  return { app };
 }
