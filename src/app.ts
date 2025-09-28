@@ -38,14 +38,6 @@ export function createMcpApp(): { app: Application } {
     const health = {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      server: {
-        name: 'aws-mcp-playground',
-        version: '0.0.1',
-        environment: process.env.NODE_ENV || 'development'
-      },
-      mcp: {
-        sessionType: 'stateless'
-      }
     };
 
     res.json(health);
