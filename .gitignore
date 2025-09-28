@@ -7,6 +7,16 @@ dist/
 build/
 *.tsbuildinfo
 
+# TypeScript compiled files
+*.js
+*.js.map  
+*.d.ts
+*.d.ts.map
+
+# But keep specific JS files if needed
+!jest.config.js
+!*.config.js
+
 # Environment variables
 .env
 .env.local
