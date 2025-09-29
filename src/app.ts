@@ -5,6 +5,8 @@ import { registerHelloTool } from './tools/hello';
 import { randomUUID } from 'crypto';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 
+const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+
 export function createMcpApp(): { app: Application } {
   const app: Application = express();
 
@@ -12,8 +14,6 @@ export function createMcpApp(): { app: Application } {
     name: 'aws-mcp-playground',
     version: '0.0.1'
   });
-
-  const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
   // Register MCP tools
   registerHelloTool(server);
@@ -78,6 +78,8 @@ export function createMcpApp(): { app: Application } {
           id: null,
         });
       }
+      console.log(req.body);
+      console.log('------');
 
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
