@@ -4,9 +4,132 @@ AWS Lambda + API GatewayでRemote MCPサーバーを動作させるプロジェ�
 
 ## アーキテクチャ
 
-- **AWS Lambda**: Express.jsベースのMCPサーバーを実行
-- **API Gateway**: MCP通信用のHTTPSエンドポイントを提供
-- **CDK**: TypeScriptによるInfrastructure as Code
+### 現在の構成（API Gateway版）
+
+```mermaid
+flowchart LR
+    Client[MCP Client<br/>Claude/ChatGPT]
+    AG[API Gateway<br/>REST API]
+    Lambda[AWS Lambda<br/>Node.js 22.x]
+    SE[serverless-express]
+    Express[Express.js]
+    MCP[MCP Server<br/>StreamableHTTP]
+    
+    Client -->|HTTPS| AG
+    AG -->|Lambda Event| Lambda
+    Lambda --> SE
+    SE --> Express
+    Express --> MCP
+    
+    style AG fill:#ff9999
+    style SE fill:#ff9999
+    
+    note1[❌ API Gatewayがレスポンスをバッファリング]
+    note2[❌ serverless-expressもバッファリング]
+    note3[❌ SSE/Streamingが動作しない]
+```
+
+**問題点:**
+- API Gatewayが全レスポンスをバッファリング（30秒タイムアウト）
+- serverless-expressがHTTPレスポンスをバッファリング
+- Streamable HTTPとSSEが正常に動作しない
+
+### 推奨構成（Lambda Function URL + Lambda Web Adapter版）
+
+```mermaid
+flowchart LR
+    Client[MCP Client<br/>Claude/ChatGPT]
+    FnURL[Lambda Function URL<br/>RESPONSE_STREAM]
+    Lambda[AWS Lambda<br/>Docker Image]
+    LWA[Lambda Web Adapter<br/>Extension]
+    Express[Express.js Server]
+    MCP[MCP Server<br/>StreamableHTTP]
+    
+    Client -->|HTTPS| FnURL
+    FnURL -->|Streaming Event| Lambda
+    Lambda --> LWA
+    LWA -->|HTTP| Express
+    Express --> MCP
+    
+    style FnURL fill:#99ff99
+    style LWA fill:#99ff99
+    
+    note1[✅ ストリーミングレスポンス対応]
+    note2[✅ SSE完全サポート]
+    note3[✅ 最大15分実行可能]
+    note4[✅ コスト削減]
+```
+
+**メリット:**
+- ストリーミングレスポンス完全対応（最大200MB）
+- SSE（Server-Sent Events）サポート
+- 最大15分の実行時間（API Gatewayは30秒）
+- コスト削減（API Gateway料金が不要）
+- コード変更最小限（Expressをほぼそのまま使用）
+
+### データフロー詳細
+
+#### POST /mcp（リクエスト・レスポンス）
+```mermaid
+sequenceDiagram
+    participant Client as MCP Client
+    participant URL as Function URL
+    participant Lambda as Lambda
+    participant LWA as Lambda Web Adapter
+    participant Express as Express App
+    participant MCP as MCP Server
+    
+    Client->>URL: POST /mcp<br/>Content-Type: application/json<br/>Body: JSON-RPC request
+    URL->>Lambda: Lambda Event (streaming)
+    Lambda->>LWA: Start HTTP server
+    LWA->>Express: HTTP POST /mcp
+    Express->>MCP: Process request
+    MCP-->>Express: JSON-RPC response
+    Express-->>LWA: HTTP 200 + JSON
+    LWA-->>Lambda: Stream response
+    Lambda-->>URL: Streaming response
+    URL-->>Client: HTTP 200 + JSON
+```
+
+#### GET /mcp（SSEストリーム）
+```mermaid
+sequenceDiagram
+    participant Client as MCP Client
+    participant URL as Function URL
+    participant Lambda as Lambda
+    participant LWA as Lambda Web Adapter
+    participant Express as Express App
+    participant MCP as MCP Server
+    
+    Client->>URL: GET /mcp<br/>Mcp-Session-Id: xxx
+    URL->>Lambda: Lambda Event (streaming)
+    Lambda->>LWA: Start HTTP server
+    LWA->>Express: HTTP GET /mcp
+    Express->>MCP: Setup SSE stream
+    
+    loop Server-Sent Events
+        MCP-->>Express: Write SSE event
+        Express-->>LWA: Stream chunk
+        LWA-->>Lambda: Stream chunk
+        Lambda-->>URL: Stream chunk
+        URL-->>Client: SSE event
+    end
+    
+    MCP->>Express: Close stream
+    Express->>LWA: End response
+    LWA->>Lambda: End stream
+    Lambda->>URL: Close connection
+    URL->>Client: Connection closed
+```
+
+### 技術スタック
+
+- **AWS Lambda**: Node.js 22.x（Docker Image）
+- **Lambda Function URL**: HTTPS エンドポイント（RESPONSE_STREAM モード）
+- **Lambda Web Adapter**: HTTPサーバー⇔Lambdaの変換レイヤー
+- **Express.js**: Webフレームワーク
+- **MCP SDK**: Model Context Protocol実装（Streamable HTTP）
+- **AWS CDK**: インフラ定義（TypeScript）
 
 ## プロジェクト構成
 
