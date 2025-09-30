@@ -25,7 +25,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.11.0",
   "dependencies": {
-    "@codegenie/serverless-express": "^4.17.0",
+    "@codegenie/serverless-express": "4.15.0",
     "@modelcontextprotocol/sdk": "^1.18.2",
     "express": "^5.1.0"
   },
