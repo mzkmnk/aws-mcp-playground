@@ -25,9 +25,9 @@
   "license": "ISC",
   "packageManager": "pnpm@10.11.0",
   "dependencies": {
-    "@codegenie/serverless-express": "4.15.0",
+    "@codegenie/serverless-express": "^4.17.0",
     "@modelcontextprotocol/sdk": "^1.18.2",
-    "express": "^5.1.0"
+    "express": "^4.21.2"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.152",
