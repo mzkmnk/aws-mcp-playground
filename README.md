@@ -248,10 +248,28 @@ curl -X POST http://localhost:8080/mcp \
   }'
 ```
 
-**6. コンテナのクリーンアップ**
+**6. コンテナの停止**
 ```bash
+# コンテナ名で停止
 docker stop mcp-server-test
+
+# または、実行中のコンテナIDを確認して停止
+docker ps  # コンテナIDを確認
+docker stop <CONTAINER_ID>
+```
+
+**7. コンテナの削除**
+```bash
 docker rm mcp-server-test
+```
+
+**8. コンテナの確認**
+```bash
+# 実行中のコンテナを表示
+docker ps
+
+# 全てのコンテナを表示（停止中も含む）
+docker ps -a
 ```
 
 ### CDKコマンド
