@@ -166,9 +166,92 @@ pnpm run build
 
 ### ローカル開発
 
+#### 通常の開発サーバー
+
 ```bash
 pnpm run dev
 # サーバーが http://localhost:3000 で起動
+```
+
+#### Dockerでのローカルテスト
+
+本番環境と同じDocker環境でローカルテストを実行できます。
+
+**1. Dockerイメージをビルド**
+```bash
+docker build -t mcp-server-test .
+```
+
+**2. コンテナを起動**
+```bash
+docker run -d -p 8080:8080 --name mcp-server-test mcp-server-test
+```
+
+**3. ヘルスチェック**
+```bash
+curl http://localhost:8080/health
+```
+
+期待されるレスポンス:
+```json
+{
+  "status": "ok",
+  "timestamp": "2025-01-01T12:00:00.000Z",
+  "server": {
+    "name": "aws-mcp-playground",
+    "version": "0.0.1",
+    "environment": "production"
+  },
+  "mcp": {
+    "connected": true,
+    "sessionType": "stateless"
+  }
+}
+```
+
+**4. MCP初期化テスト**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {
+        "name": "test-client",
+        "version": "1.0.0"
+      }
+    }
+  }'
+```
+
+期待されるレスポンス（SSE形式）:
+```
+event: message
+data: {"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"aws-mcp-playground","version":"0.0.1"}},"jsonrpc":"2.0","id":1}
+```
+
+**5. Tools APIテスト**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
+  }'
+```
+
+**6. コンテナのクリーンアップ**
+```bash
+docker stop mcp-server-test
+docker rm mcp-server-test
 ```
 
 ### CDKコマンド
@@ -214,9 +297,53 @@ pnpm run watch
    pnpm run cdk:deploy
    ```
 
-4. **デプロイのテスト**:
+   デプロイが完了すると、以下のような出力が表示されます：
+   ```
+   Outputs:
+   AwsMcpPlaygroundStack.FunctionUrl = https://abc123def456.lambda-url.ap-northeast-1.on.aws/
+   AwsMcpPlaygroundStack.McpEndpoint = https://abc123def456.lambda-url.ap-northeast-1.on.aws/mcp
+   AwsMcpPlaygroundStack.LambdaFunctionArn = arn:aws:lambda:ap-northeast-1:123456789012:function:AwsMcpPlayground-McpServer
+   ```
+
+4. **デプロイ後の動作確認**:
+
+   **4-1. ヘルスチェック**
    ```bash
-   curl https://YOUR_API_URL/health
+   FUNCTION_URL="https://abc123def456.lambda-url.ap-northeast-1.on.aws"
+   curl ${FUNCTION_URL}/health
+   ```
+
+   **4-2. MCP初期化テスト**
+   ```bash
+   curl -X POST ${FUNCTION_URL}/mcp \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json, text/event-stream" \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 1,
+       "method": "initialize",
+       "params": {
+         "protocolVersion": "2024-11-05",
+         "capabilities": {},
+         "clientInfo": {
+           "name": "test-client",
+           "version": "1.0.0"
+         }
+       }
+     }'
+   ```
+
+   **4-3. Tools APIテスト**
+   ```bash
+   curl -X POST ${FUNCTION_URL}/mcp \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json, text/event-stream" \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 2,
+       "method": "tools/list",
+       "params": {}
+     }'
    ```
 
 ## MCP統合
@@ -230,12 +357,14 @@ Claude DesktopでデプロイしたMCPサーバーを使用する設定:
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-fetch"],
       "env": {
-        "MCP_FETCH_BASE_URL": "https://YOUR_API_URL"
+        "MCP_FETCH_BASE_URL": "https://abc123def456.lambda-url.ap-northeast-1.on.aws"
       }
     }
   }
 }
 ```
+
+**注意:** `YOUR_API_URL`を実際のLambda Function URLに置き換えてください（デプロイ時に`FunctionUrl`として出力されます）。
 
 ## 便利なコマンド
 
