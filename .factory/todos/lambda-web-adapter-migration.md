@@ -63,12 +63,12 @@ Client → Lambda Function URL → Lambda → Lambda Web Adapter → Express →
 - 起動モード: `RESPONSE_STREAM`
 - ポート: 8080
 
-### 🔄 フェーズ3: CDKスタックの修正
-**ステータス:** 準備中
+### ✅ フェーズ3: CDKスタックの修正
+**ステータス:** 完了
 
 **修正ファイル:**
-- [ ] `lib/aws-mcp-playground-stack.ts` - メイン変更
-- [ ] `test/aws-mcp-playground.test.ts` - テスト更新
+- [x] `lib/aws-mcp-playground-stack.ts` - メイン変更
+- [x] `test/aws-mcp-playground.test.ts` - テスト更新
 
 **主な変更内容:**
 ```typescript

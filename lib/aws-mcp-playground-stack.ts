@@ -1,94 +1,53 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
-import * as logs from 'aws-cdk-lib/aws-logs';
+import * as path from 'path';
 
 export class AwsMcpPlaygroundStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Lambda function for MCP server using NodejsFunction
-    const mcpLambda = new NodejsFunction(this, 'McpServerFunction', {
+    // Lambda Web AdapterがあるDockerを使用したMCPサーバ向けのLambda
+    const mcpLambda = new lambda.DockerImageFunction(this, 'McpServerFunction', {
       functionName: 'AwsMcpPlayground-McpServer',
-      entry: 'src/lambda.ts',
-      runtime: lambda.Runtime.NODEJS_22_X,
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '..'), {
+        file: 'Dockerfile',
+      }),
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
+      description: 'Remote MCP Server running on AWS Lambda with Lambda Web Adapter',
       environment: {
         NODE_ENV: 'production',
       },
-      description: 'Remote MCP Server running on AWS Lambda',
-      bundling: {
-        forceDockerBundling: false,
-      },
     });
 
-    // access log group
-    const apiLogAccessLogGroup = new logs.LogGroup(
-      this,
-      'ApiLogAccessGroup',
-      {
-        logGroupName: `/aws/apigateway/api-log-access-log`,
-        retention: logs.RetentionDays.ONE_YEAR
-      }
-    )
-
-    // API Gateway
-    const api = new apigateway.RestApi(this, 'McpApi', {
-      restApiName: 'MCP Server API',
-      description: 'API Gateway for Remote MCP Server',
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
-        allowHeaders: [
+    
+    const functionUrl = mcpLambda.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+      cors: {
+        allowedOrigins: ['*'],
+        allowedMethods: [lambda.HttpMethod.ALL],
+        allowedHeaders: [
           'Content-Type',
-          'X-Amz-Date',
           'Authorization',
-          'X-Api-Key',
-          'X-Amz-Security-Token',
-          'X-Amz-User-Agent',
+          'Mcp-Session-Id',
           'X-Requested-With',
         ],
+        exposedHeaders: ['Mcp-Session-Id'],
+        maxAge: cdk.Duration.hours(1),
       },
-      binaryMediaTypes: ['*/*'],
-      deployOptions: {
-        // 実行ログ
-        dataTraceEnabled: true, // 詳細にログを表示
-        loggingLevel: apigateway.MethodLoggingLevel.INFO, // 実行六の詳細度
-
-        // アクセスログ
-        accessLogDestination: new apigateway.LogGroupLogDestination(
-          apiLogAccessLogGroup
-        ), // 出力先の指定
-        accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(), // jsonが良さそう
-      }
     });
 
-    // Lambda integration
-    const lambdaIntegration = new apigateway.LambdaIntegration(mcpLambda, {
-      requestTemplates: { 'application/json': '{ "statusCode": "200" }' },
-      proxy: true,
-    });
-
-    // API Gateway routes
-    // Root resource (for health check and other endpoints)
-    api.root.addMethod('ANY', lambdaIntegration);
-
-    // Proxy resource to catch all paths
-    const proxyResource = api.root.addResource('{proxy+}');
-    proxyResource.addMethod('ANY', lambdaIntegration);
-
-    // Output the API URL
-    new cdk.CfnOutput(this, 'ApiUrl', {
-      value: api.url,
-      description: 'API Gateway URL',
+    // Output the Function URL
+    new cdk.CfnOutput(this, 'FunctionUrl', {
+      value: functionUrl.url,
+      description: 'Lambda Function URL (supports streaming)',
     });
 
     // Output the MCP endpoint URL
     new cdk.CfnOutput(this, 'McpEndpoint', {
-      value: `${api.url}mcp`,
+      value: `${functionUrl.url}mcp`,
       description: 'MCP Server Endpoint URL',
     });
 
