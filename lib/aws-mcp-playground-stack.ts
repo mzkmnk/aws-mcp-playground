@@ -9,7 +9,7 @@ export class AwsMcpPlaygroundStack extends cdk.Stack {
 
     // Lambda Web AdapterがあるDockerを使用したMCPサーバ向けのLambda
     const mcpLambda = new lambda.DockerImageFunction(this, 'McpServerFunction', {
-      functionName: 'AwsMcpPlayground-McpServer',
+      functionName: 'AwsMcpPlayground-McpServer-v2',
       code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '..'), {
         file: 'Dockerfile',
       }),
