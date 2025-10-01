@@ -58,7 +58,7 @@ Client → Lambda Function URL → Lambda → Lambda Web Adapter → Express →
 - [x] `src/index.ts` 確認（変更不要）
 
 **Dockerfile仕様:**
-- ベースイメージ: `public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4`
+- ベースイメージ: `public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1`（最新版）
 - Node.js: 22-slim
 - 起動モード: `RESPONSE_STREAM`
 - ポート: 8080
