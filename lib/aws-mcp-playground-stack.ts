@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
+import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 import * as path from 'path';
 
 export class AwsMcpPlaygroundStack extends cdk.Stack {
@@ -12,6 +13,7 @@ export class AwsMcpPlaygroundStack extends cdk.Stack {
       functionName: 'AwsMcpPlayground-McpServer-v2',
       code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '..'), {
         file: 'Dockerfile',
+        platform: Platform.LINUX_AMD64,
       }),
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
@@ -21,7 +23,7 @@ export class AwsMcpPlaygroundStack extends cdk.Stack {
       },
     });
 
-    
+
     const functionUrl = mcpLambda.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
       invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
