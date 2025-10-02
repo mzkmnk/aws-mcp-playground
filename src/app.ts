@@ -2,17 +2,17 @@ import express, { Application } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerHelloTool } from './tools/hello';
+import { randomUUID } from 'crypto';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 
-export function createMcpApp(): { app: Application; setupMCP: () => void } {
+const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+
+export function createMcpApp(): { app: Application } {
   const app: Application = express();
 
   const server = new McpServer({
     name: 'aws-mcp-playground',
     version: '0.0.1'
-  });
-
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined
   });
 
   // Register MCP tools
@@ -21,11 +21,11 @@ export function createMcpApp(): { app: Application; setupMCP: () => void } {
   // Middleware
   app.use(express.json());
 
-  // CORS設定
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Mcp-Session-Id');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Expose-Headers', 'Mcp-Session-Id');
     if (req.method === 'OPTIONS') {
       res.sendStatus(200);
     } else {
@@ -34,52 +34,104 @@ export function createMcpApp(): { app: Application; setupMCP: () => void } {
   });
 
   // Health check endpoint
-  app.get('/health', async (req, res) => {
+  app.get('/health', async (_, res) => {
     const health = {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      server: {
-        name: 'aws-mcp-playground',
-        version: '0.0.1',
-        environment: process.env.NODE_ENV || 'development'
-      },
-      mcp: {
-        connected: transport ? true : false,
-        sessionType: 'stateless'
-      }
     };
 
     res.json(health);
   });
 
-  // MCP endpoint - GET
-  app.get('/mcp', async (req, res) => {
-    try {
-      await transport.handleRequest(req, res);
-    } catch (error) {
-      console.error('MCP GET request error:', error);
-      res.status(500).json({ error: 'MCP request failed' });
-    }
-  });
-
-  // MCP endpoint - POST
   app.post('/mcp', async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
     try {
+      let transport: StreamableHTTPServerTransport;
+
+      if (sessionId && transports[sessionId]) {
+        transport = transports[sessionId];
+      } else if (!sessionId && isInitializeRequest(req.body)) {
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (sessionId) => {
+            console.log(`Session initialized with ID: ${sessionId}`);
+            transports[sessionId] = transport;
+          }
+        });
+
+        transport.onclose = () => {
+          const sid = transport.sessionId;
+          if (sid && transports[sid]) {
+            delete transports[sid];
+          }
+        };
+
+        await server.connect(transport);
+      } else {
+        return res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Bad Request: No valid session ID provided',
+          },
+          id: null,
+        });
+      }
+      console.log(req.body);
+      console.log('------');
+
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
       console.error('MCP POST request error:', error);
-      res.status(500).json({ error: 'MCP request failed' });
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32603,
+            message: 'Internal server error',
+          },
+          id: null,
+        });
+      }
     }
   });
 
-  // Initialize MCP server
-  const setupMCP = () => {
-    server.connect(transport).then(() => {
-      console.log('MCP server connected successfully');
-    }).catch((error) => {
-      console.error('Failed to setup MCP server:', error);
-    })
-  };
+  app.get('/mcp', async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
-  return { app, setupMCP };
+    if (!sessionId || !transports[sessionId]) {
+      return res.status(400).send('Invalid or missing session ID');
+    }
+
+    try {
+      const transport = transports[sessionId];
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      console.error('MCP GET request error:', error);
+      if (!res.headersSent) {
+        res.status(500).send('Error processing SSE request');
+      }
+    }
+  });
+
+  app.delete('/mcp', async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+    if (!sessionId || !transports[sessionId]) {
+      return res.status(400).send('Invalid or missing session ID');
+    }
+
+    try {
+      const transport = transports[sessionId];
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      console.error('MCP DELETE request error:', error);
+      if (!res.headersSent) {
+        res.status(500).send('Error processing session termination');
+      }
+    }
+  });
+
+  return { app };
 }
